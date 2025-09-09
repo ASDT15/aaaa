@@ -754,20 +754,7 @@
   </style>
   <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js  "></script>
 
-  <script>
-    // التحقق من دعم Service Worker
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/service-worker.js')
-            .then((registration) => {
-                console.log('Service Worker registered with scope:', registration.scope);
-            })
-            .catch((error) => {
-                console.log('Service Worker registration failed:', error);
-            });
-        });
-    }
-
+<script>
     // دالة لعرض/إخفاء رسالة عدم الاتصال
     function showOfflineMessage(show) {
         let offlineDiv = document.getElementById('offline-notification');
@@ -813,23 +800,62 @@
         }
     }
 
-    // مراقبة حالة الاتصال
-    window.addEventListener('load', () => {
-        showOfflineMessage(!navigator.onLine); // إظهار الرسالة إذا لم يكن هناك اتصال عند التحميل
-    });
+    // عند تحميل الصفحة
+    document.addEventListener('DOMContentLoaded', async () => {
+        // التحقق من دعم Service Worker (كما هو)
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                .then((registration) => {
+                    console.log('Service Worker registered with scope:', registration.scope);
+                })
+                .catch((error) => {
+                    console.log('Service Worker registration failed:', error);
+                });
+            });
+        }
 
-    window.addEventListener('online', () => {
-        console.log('تم الاتصال بالإنترنت');
-        // إخفاء الرسالة
-        showOfflineMessage(false);
-        // تحديث الصفحة تلقائيًا
-        window.location.reload();
-    });
+        // محاولة استخدام @capacitor/network أولاً
+        if (typeof Capacitor !== 'undefined' && Capacitor.Plugins && Capacitor.Plugins.Network) {
+            const { Network } = Capacitor.Plugins;
 
-    window.addEventListener('offline', () => {
-        console.log('فقد الاتصال بالإنترنت');
-        // إظهار الرسالة
-        showOfflineMessage(true);
+            // التحقق من الحالة عند البدء
+            const status = await Network.getStatus();
+            console.log("الحالة الأولية للشبكة:", status);
+            showOfflineMessage(!status.connected);
+
+            // الاستماع للتغييرات
+            Network.addListener('networkStatusChange', (status) => {
+                console.log("حالة الشبكة تغيرت:", status);
+                if (status.connected) {
+                    console.log('✅ تم الاتصال بالإنترنت');
+                    showOfflineMessage(false);
+                    // تحديث الصفحة تلقائيًا
+                    window.location.reload();
+                } else {
+                    console.log('❌ فقد الاتصال بالإنترنت');
+                    showOfflineMessage(true);
+                }
+            });
+        } else {
+            // كحل احتياطي، نعود لـ navigator.onLine
+            console.warn('Plugin @capacitor/network غير متوفر. استخدام navigator.onLine كاحتياطي.');
+
+            window.addEventListener('load', () => {
+                showOfflineMessage(!navigator.onLine);
+            });
+
+            window.addEventListener('online', () => {
+                console.log('(Fallback) ✅ تم الاتصال بالإنترنت');
+                showOfflineMessage(false);
+                window.location.reload();
+            });
+
+            window.addEventListener('offline', () => {
+                console.log('(Fallback) ❌ فقد الاتصال بالإنترنت');
+                showOfflineMessage(true);
+            });
+        }
     });
 </script>
 </head>
@@ -1221,19 +1247,7 @@ function removeProductFromDOM(id) {
         } else {
           console.error('Fetch error:', error);
         }
-        // If no cache, use fallback
-        if (!cachedData) {
-          products = [
-            { id: 1, name: "عباية خليجية فاخرة", price: 10000, image: "صور المنتجات/خليجي/a.jpg", description: "عباية ذات خامة ناعمة مثل الحرير.", type: "خليجي" },
-            { id: 2, name: "عباية سوداء كلاسيكية", price: 7500, image: "صور المنتجات/عبايات سوداء تقليدي/a.jpg", description: "تصميم أنيق وكلاسيكي.", type: "عبايات سوداء تقليدي" },
-            { id: 3, name: "عباية بتطريز خفيف", price: 8000, image: "صور المنتجات/عبايات تطريز خفيف/a.jpg", description: "تطريز دقيق يضفي لمسة فنية.", type: "عبايات تطريز خفيف" },
-            { id: 4, name: "عباية ملونة أنيقة", price: 12500, image: "صور المنتجات/عبايات ملونه/a.jpg", description: "ألوان زاهية تناسب جميع الأوقات.", type: "عبايات ملونة" },
-            { id: 5, name: "عباية تركية مطرزة", price: 13000, image: "صور المنتجات/عبايات تركية/a.jpg", description: "تصميمات تركية أصيلة.", type: "عبايات تركية" },
-            { id: 6, name: "عباية مطرزة يدوياً", price: 15000, image: "صور المنتجات/عبايات مطرزة/a.jpg", description: "تطريز يدوي فريد من نوعه.", type: "عبايات مطرزة" }
-          ];
-          renderProducts();
-          console.log("Fallback products loaded");
-        }
+    
         hideLoader(); // إخفاء شريط التحميل حتى في حالة الخطأ أو استخدام البيانات الاحتياطية
       }
     }
@@ -1337,7 +1351,32 @@ function removeProductFromDOM(id) {
       // تفريغ العربة بعد الإرسال
       emptyCart();
     }
-    
+    async function fetchProducts() {
+  try {
+    const timestamp = new Date().getTime(); // لتجنيب الكاش
+    const response = await fetch(`${API_BASE_URL}/api/products?t=${timestamp}`, {
+      cache: 'no-cache' // منع الكاش
+    });
+
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const fetchedProducts = await response.json();
+
+    products = fetchedProducts.map(product => ({
+      id: product.id,
+      name: product.name,
+      price: parseFloat(product.price) || 0,
+      description: product.description || "",
+      image: product.main_image_url || (product.images && product.images[0]) || product.image || "placeholder.jpg",
+      type: product.type || "غير مصنف"
+    }));
+
+    renderProducts();
+    console.log("Products fetched from server");
+  } catch (error) {
+    console.error('Error fetching products:', error);
+    alert('حدث خطأ أثناء جلب المنتجات.');
+  }
+}
   </script>
 </body>
 </html>
