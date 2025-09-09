@@ -842,14 +842,7 @@
       <img src="LOGO.png" alt="تحميل" class="loader-image">
       <div class="loader-text">جاري التحميل...</div>
     </div>
-    offlineDiv.innerHTML = `
-    <div style="position: fixed; top: 0; left: 0; width: 100%; background-color: red; color: white; text-align: center; padding: 15px; z-index: 10000;">
-        <span>⚠️ غير متصل بالإنترنت</span>
-        <button onclick="window.location.reload()" style="margin-left: 10px; background: white; color: red; border: none; padding: 5px 10px;">تحديث</button>
-    </div>
-`;
   </div>
-
   <!-- Header -->
   <header>
     <div class="header-content">
@@ -1344,58 +1337,7 @@ function removeProductFromDOM(id) {
       // تفريغ العربة بعد الإرسال
       emptyCart();
     }
-    // في داخل <script> في index.html
-
-// دالة لعرض/إخفاء رسالة عدم الاتصال
-function showOfflineMessage(show) {
-     // ... (كود الدالة كما هو) ...
-}
-
-// عند تحميل الصفحة
-document.addEventListener('DOMContentLoaded', async () => {
-     // التحقق من دعم Service Worker (كما هو)
-     if ('serviceWorker' in navigator) {
-         // ... (كود تسجيل Service Worker كما هو) ...
-     }
-
-     // التحقق من وجود الـ Plugin
-     if (typeof Capacitor !== 'undefined' && Capacitor.Plugins && Capacitor.Plugins.Network) {
-         const { Network } = Capacitor.Plugins;
-
-         // التحقق من الحالة عند البدء
-         const status = await Network.getStatus();
-         showOfflineMessage(!status.connected);
-         console.log("الحالة الأولية:", status);
-
-         // الاستماع للتغييرات
-         Network.addListener('networkStatusChange', (status) => {
-             console.log("حالة الشبكة تغيرت:", status);
-             if (status.connected) {
-                 console.log('تم الاتصال بالإنترنت');
-                 showOfflineMessage(false);
-                 window.location.reload();
-             } else {
-                 console.log('فقد الاتصال بالإنترنت');
-                 showOfflineMessage(true);
-             }
-         });
-     } else {
-         // كحل احتياطي، نعود لـ navigator.onLine
-         console.warn('Plugin @capacitor/network غير متوفر. استخدام navigator.onLine كاحتياطي.');
-         window.addEventListener('load', () => {
-             showOfflineMessage(!navigator.onLine);
-         });
-         window.addEventListener('online', () => {
-             console.log('(Fallback) تم الاتصال بالإنترنت');
-             showOfflineMessage(false);
-             window.location.reload();
-         });
-         window.addEventListener('offline', () => {
-             console.log('(Fallback) فقد الاتصال بالإنترنت');
-             showOfflineMessage(true);
-         });
-     }
-});
+    
   </script>
 </body>
 </html>
