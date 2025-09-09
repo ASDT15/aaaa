@@ -1,5 +1,7 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
+  <!-- داخل index.html -->
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
@@ -751,6 +753,85 @@
 }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js  "></script>
+
+  <script>
+    // التحقق من دعم Service Worker
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/service-worker.js')
+            .then((registration) => {
+                console.log('Service Worker registered with scope:', registration.scope);
+            })
+            .catch((error) => {
+                console.log('Service Worker registration failed:', error);
+            });
+        });
+    }
+
+    // دالة لعرض/إخفاء رسالة عدم الاتصال
+    function showOfflineMessage(show) {
+        let offlineDiv = document.getElementById('offline-notification');
+        if (show) {
+            if (!offlineDiv) {
+                offlineDiv = document.createElement('div');
+                offlineDiv.id = 'offline-notification';
+                offlineDiv.innerHTML = `
+                    <div style="
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        background-color: #ffdddd;
+                        color: #d8000c;
+                        text-align: center;
+                        padding: 10px;
+                        z-index: 10000;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        gap: 10px;
+                    ">
+                        <span>⚠️ غير متصل بالإنترنت</span>
+                        <button onclick="window.location.reload()" style="
+                            background: none;
+                            border: 1px solid #d8000c;
+                            color: #d8000c;
+                            padding: 5px 10px;
+                            border-radius: 4px;
+                            cursor: pointer;
+                        ">تحديث</button>
+                    </div>
+                `;
+                document.body.appendChild(offlineDiv);
+            }
+            offlineDiv.style.display = 'block';
+        } else {
+            if (offlineDiv) {
+                offlineDiv.style.display = 'none';
+            }
+        }
+    }
+
+    // مراقبة حالة الاتصال
+    window.addEventListener('load', () => {
+        showOfflineMessage(!navigator.onLine); // إظهار الرسالة إذا لم يكن هناك اتصال عند التحميل
+    });
+
+    window.addEventListener('online', () => {
+        console.log('تم الاتصال بالإنترنت');
+        // إخفاء الرسالة
+        showOfflineMessage(false);
+        // تحديث الصفحة تلقائيًا
+        window.location.reload();
+    });
+
+    window.addEventListener('offline', () => {
+        console.log('فقد الاتصال بالإنترنت');
+        // إظهار الرسالة
+        showOfflineMessage(true);
+    });
+</script>
 </head>
 <body>
   <!-- Background Pattern -->
@@ -761,7 +842,14 @@
       <img src="LOGO.png" alt="تحميل" class="loader-image">
       <div class="loader-text">جاري التحميل...</div>
     </div>
+    offlineDiv.innerHTML = `
+    <div style="position: fixed; top: 0; left: 0; width: 100%; background-color: red; color: white; text-align: center; padding: 15px; z-index: 10000;">
+        <span>⚠️ غير متصل بالإنترنت</span>
+        <button onclick="window.location.reload()" style="margin-left: 10px; background: white; color: red; border: none; padding: 5px 10px;">تحديث</button>
+    </div>
+`;
   </div>
+
   <!-- Header -->
   <header>
     <div class="header-content">
@@ -830,6 +918,54 @@
   <audio id="addSound" src="athfo.mp3" preload="none"></audio>
   <audio id="sendSound" src="arsal.mp3" preload="none"></audio>
   <audio id="emptySound" src="tvrug.mp3" preload="none"></audio>
+  <script>
+// الاتصال بسيرفر WebSocket
+const ws = new WebSocket('wss://dreamtime-store-api-production.up.railway.app');
+
+// استقبال الرسائل
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+
+  if (data.type === 'add') {
+    addProductToDOM(data.product);
+  } else if (data.type === 'update') {
+    updateProductInDOM(data.product);
+  } else if (data.type === 'delete') {
+    removeProductFromDOM(data.id);
+  }
+};
+
+// دوال لتحديث DOM
+function addProductToDOM(product) {
+  const container = document.getElementById('products-container');
+  const div = document.createElement('div');
+  div.id = `product-${product.id}`;
+  div.className = 'product';
+  div.innerHTML = `
+    <h3>${product.name}</h3>
+    <p>Price: $${product.price}</p>
+    <img src="${product.image}" alt="${product.name}" />
+  `;
+  container.appendChild(div);
+}
+
+function updateProductInDOM(product) {
+  const div = document.getElementById(`product-${product.id}`);
+  if (div) {
+    div.innerHTML = `
+      <h3>${product.name}</h3>
+      <p>Price: $${product.price}</p>
+      <img src="${product.image}" alt="${product.name}" />
+    `;
+  }
+}
+
+function removeProductFromDOM(id) {
+  const elem = document.getElementById(`product-${id}`);
+  if (elem) elem.remove();
+}
+</script>
+
   <script>
    // تحديد عنوان API_BASE_URL
    const API_BASE_URL = 'https://dreamtime-store-api-production.up.railway.app';
@@ -1208,6 +1344,58 @@
       // تفريغ العربة بعد الإرسال
       emptyCart();
     }
+    // في داخل <script> في index.html
+
+// دالة لعرض/إخفاء رسالة عدم الاتصال
+function showOfflineMessage(show) {
+     // ... (كود الدالة كما هو) ...
+}
+
+// عند تحميل الصفحة
+document.addEventListener('DOMContentLoaded', async () => {
+     // التحقق من دعم Service Worker (كما هو)
+     if ('serviceWorker' in navigator) {
+         // ... (كود تسجيل Service Worker كما هو) ...
+     }
+
+     // التحقق من وجود الـ Plugin
+     if (typeof Capacitor !== 'undefined' && Capacitor.Plugins && Capacitor.Plugins.Network) {
+         const { Network } = Capacitor.Plugins;
+
+         // التحقق من الحالة عند البدء
+         const status = await Network.getStatus();
+         showOfflineMessage(!status.connected);
+         console.log("الحالة الأولية:", status);
+
+         // الاستماع للتغييرات
+         Network.addListener('networkStatusChange', (status) => {
+             console.log("حالة الشبكة تغيرت:", status);
+             if (status.connected) {
+                 console.log('تم الاتصال بالإنترنت');
+                 showOfflineMessage(false);
+                 window.location.reload();
+             } else {
+                 console.log('فقد الاتصال بالإنترنت');
+                 showOfflineMessage(true);
+             }
+         });
+     } else {
+         // كحل احتياطي، نعود لـ navigator.onLine
+         console.warn('Plugin @capacitor/network غير متوفر. استخدام navigator.onLine كاحتياطي.');
+         window.addEventListener('load', () => {
+             showOfflineMessage(!navigator.onLine);
+         });
+         window.addEventListener('online', () => {
+             console.log('(Fallback) تم الاتصال بالإنترنت');
+             showOfflineMessage(false);
+             window.location.reload();
+         });
+         window.addEventListener('offline', () => {
+             console.log('(Fallback) فقد الاتصال بالإنترنت');
+             showOfflineMessage(true);
+         });
+     }
+});
   </script>
 </body>
 </html>
